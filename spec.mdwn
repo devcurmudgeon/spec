@@ -1,0 +1,518 @@
+[[!meta title="Baserock definitions format"]]
+
+The Baserock definitions format
+===============================
+
+This page describes the Baserock definitions format (morph files). It is intended to be useful as
+an *informal* specification. It is not guaranteed to be accurate or exhaustive.
+
+If you are just getting started with Baserock, the [[quick-start]], [[devel-with]] and [[guides]] pages provide a more practical introduction.
+
+The allowed YAML constructs are described in json-schema format here: <http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git/tree/schemas>.
+
+The data model is described using OWL here: <http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git/tree/schemas/baserock.owl>.
+
+The source code of [[Morph]] and [[YBD]] might be more useful if you need a completely accurate description of how the current Baserock definition format is used in practice.
+
+[[!toc startlevel=2 levels=2]]
+
+Versioning
+----------
+
+The current version of the definitions format is version 7.
+
+See also: the [[planned]] versions, and the [[historical]] versions of the
+format.
+
+Please propose changes to the format described here on the
+[[baserock-dev@baserock.org mailing list|mailinglist]]. Ideally, provide a
+patch for this file against the <git://baserock.branchable.com/> repo, but just
+describing the change you want to make is also fine.
+
+Definitions repository
+----------------------
+
+The design of Baserock aims to encourage users to keep *all* the information
+needed to build and deploy their software in one Git repository. This repo is
+often referred to as the 'definitions.git' repo, although nothing forces you
+to call it that.
+
+Some of this information will be Baserock 'definitions files', which describe
+how to build or deploy some software. Baserock tooling should expect that all
+the definitions it needs to process live in one Git repo. The definitions.git
+repo can and should contain any other files needed for build and deployment as
+well, such as configuration data and documentation.
+
+The Baserock Project maintains a set of 'reference system definitions' at
+[git://git.baserock.org/baserock/baserock/definitions] (which can also be
+referred to as [baserock:baserock/definitions], when using the repo aliasing
+feature of [[Morph]]). That repo contains systems that can be built and
+deployed as-is, but it is important that users can fork this repo as well,
+and work on systems in their version using `git merge` or `git rebase` to keep
+up to date with changes from upstream.
+
+Baserock tooling should not mandate anything about the definitions repo that
+the user wants to process, other than the rules defined below.
+
+
+[git://git.baserock.org/baserock/baserock/definitions]: http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git
+[baserock:baserock/definitions]: http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git
+
+### Structure
+
+Tooling can enforce that the definitions.git repo is actually a Git repo, but
+it can equally just treat it as a tree of files and directories.
+
+The top directory of the repo must contain a file named `VERSION`, that is
+valid [YAML] and contains a dict with key "version" and a value that is an
+integer.
+
+The integer specifies the version of the definitions format that this repo
+uses. A tool should refuse to process a version that it doesn't support, to
+avoid unpredictable errors. See the "Versioning" heading above for more detail
+on versions.
+
+To find all the Baserock definition files in the repo, tooling can recursively
+scan the contents of the repo for files matching the glob pattern "\*.morph".
+
+Deployment tooling should look in the toplevel directory /only/ for files
+matching the following globs. (The purpose of these files is described in the
+"deployment" section below).
+
+  - `\*.check`
+  - `\*.check.help`
+  - `\*.configure`
+  - `\*.configure.help`
+  - `\*.write`
+  - `\*.write.help`
+
+Definitions file syntax
+-----------------------
+
+[YAML] is used for all Baserock definitions files.
+
+The toplevel entity in a definition is a dict, in all cases. Any syntax errors
+or type errors (such the toplevel entity being a number, or something) should
+be reported to the user.
+
+The [[Morph]] tool raises an error if any unknown dictionary keys are found in
+the definition, mainly so that it reports any spelling errors in key names.
+
+### Common fields
+
+For all definitions, use the following fields:
+
+* `name`: the name of the definition; it must currently match the filename
+  (without the `.morph` suffix); **required**
+* `kind`: the kind of thing being built; **required**
+* `description`: a comment to describe what the definition is for; optional
+
+### Build definitions: Chunks, Systems and Strata
+
+Within this document, consider 'building' to be the act of running a series of
+commands in a given 'environment', where the commands and how to build the
+environment are completely specified by the definitions and the build tool.
+
+For chunks, use the following fields:
+
+* `build-system`: if the program is built using a build system known to
+  `morph`, you can set this field and avoid having to set the various
+  `*-commands` fields; the commands that the build system specifies can
+  be overridden; the following build-systems are known:
+
+  - `autotools`
+  - `python-distutils`
+  - `cpan`
+  - `cmake`
+  - `qmake`
+
+  optional
+
+* `pre-configure-commands`: a list of shell commands to run at
+  the configuration phase of a build, before the list in `configure-commands`;
+  optional
+* `configure-commands`: a list of shell commands to run at the configuraiton
+  phase of a build; optional
+* `post-configure-commands`: a list of shell commands to run at
+  the configuration phase of a build, after the list in `configure-commands`;
+  optional
+
+* `pre-build-commands`: a list of shell commands to run at
+  the build phase of a build, before the list in `build-commands`;
+  optional
+* `build-commands`: a list of shell commands to run to build (compile) the
+  project; optional
+* `post-build-commands`: a list of shell commands to run at
+  the build phase of a build, after the list in `build-commands`;
+  optional
+
+* `pre-test-commands`: a list of shell commands to run at
+  the test phase of a build, before the list in `test-commands`;
+  optional
+* `test-commands`: a list of shell commands to run unit tests and other
+  non-interactive tests on the built but un-installed project; optional
+* `post-test-commands`: a list of shell commands to run at
+  the test phase of a build, after the list in `test-commands`;
+  optional
+
+* `pre-install-commands`: a list of shell commands to run at
+  the install phase of a build, before the list in `install-commands`;
+  optional
+* `install-commands`: a list of shell commands to ; optional
+* `post-install-commands`: a list of shell commands to run at
+  the install phase of a build, after the list in `strip-commands`;
+  optional
+
+* `pre-strip-commands`: a list of shell commands to run at
+  the strip phase of a build, before the list in `strip-commands`;
+  optional
+* `strip-commands`: a list of shell commands to strip debug symbols from binaries;
+  this should strip binaries in the directory named in the `DESTDIR` environment
+  variable, not the actual system; optional
+* `post-strip-commands`: a list of shell commands to run at
+  the strip phase of a build, after the list in `install-commands`;
+  optional
+
+* `max-jobs`: a string to be given to `make` as the argument to the `-j`
+  option to specify the maximum number of parallel jobs; the only sensible
+  value is `"1"` (including the quotes), to prevent parallel jobs to run
+  at all; parallel jobs are only used during the `build-commands` phase,
+  since the other phases are often not safe when run in parallel; `morph`
+  picks a default value based on the number of CPUs on the host system;
+  optional
+
+* `chunks`: a key/value map of lists of regular expressions;
+  the key is the name
+  of a binary chunk, the regexps match the pathnames that will be
+  included in that chunk; the patterns match the pathnames that get installed
+  by `install-commands` (the whole path below `DESTDIR`); every file must
+  be matched by at least one pattern; by default, a single chunk gets
+  created, named according to the definition, and containing all files;
+  optional
+
+For strata, use the following fields:
+
+* `build-depends`: a list of strings, each of which refers to another
+  stratum that the current stratum depends on. This list may be omitted
+  or empty if the stratum does not depend on anything else.
+* `chunks`: a list of key/value mappings, where each mapping corresponds
+  to a chunk to be included in the stratum; the mappings may use the
+  following keys:
+    - `name` is the chunk's name (may be different from the
+      morphology name),
+    - `repo` is the repository in which to find (defaults to chunk name),
+    - `ref` identifies the commit to use (typically a branch name, but
+       any tree-ish git accepts is ok)
+    - `morph` is a path, relative to the top of the definitions repo,
+      to a chunk .morph file.
+    - `build-system` specifies one of the predefined build systems. You
+      must specify ONE of `morph` or `build-system` for each chunk.
+  In addition to these keys, each of the sources can specify a list of
+  build dependencies using the `build-depends` field. To specify one or
+  more chunk dependencies, `build-depends` needs to be set to a list
+  that contains the names of chunks that the source depends on in the
+  same stratum. These names correspond to the values of the `name`
+  fields of the other chunks.
+
+  At the moment, the ordering is significant in chunk build-depends. This
+  is used during bootstrapping, when you want to override the first build of
+  a component with its second version in a staging area. This feature is kind
+  of a workaround for the lack of distinction between build and runtime
+  dependencies.
+
+For systems, use the following fields:
+
+* `strata`: a list of key/value mappings, similar to the 'chunks' field of a
+  stratum. Two fields are allowed (are both required?):
+    - `name`: name of the artifact when the stratum is build
+    - `morph`: path to a stratum .morph file relative to the top of the containing repo
+
+Example chunk (simplified commands):
+
+    name: eglibc
+    kind: chunk
+    configure-commands:
+    - mkdir o
+    - cd o && ../libc/configure --prefix=/usr
+    build-commands:
+    - cd o && make
+    install-commands:
+    - cd o && make install_root="$DESTDIR" install
+
+Example stratum:
+
+    name: foundation
+    kind: stratum
+    chunks:
+    - name: fhs-dirs
+      repo: upstream:fhs-dirs
+      ref: baserock/bootstrap
+      build-depends: []
+    - name: linux-api-headers
+      repo: upstream:linux
+      ref: baserock/morph
+      build-depends:
+      - fhs-dirs
+    - name: eglibc
+      repo: upstream:eglibc
+      ref: baserock/bootstrap
+      build-depends:
+      - linux-api-headers
+    - name: busybox
+      repo: upstream:busybox
+      ref: baserock/bootstrap
+      build-depends:
+      - fhs-dirs
+      - linux-api-headers
+
+Example system:
+
+    name: base
+    kind: system
+    strata:
+    - morph: foundation
+    - morph: linux-stratum
+
+### Deployment definitions: Clusters
+
+**NOTE**: The deployment mechanism specified here is quite abstract. Most of
+the code used to do real-world deployments is currently tied to [[Morph]] and
+kept in [morph.git].
+
+For 'deployment', [[Morph]] defines an API for running 'extensions'. The
+'cluster' and 'system' definitions together describe what extensions should be
+run, and what should be set in their environment, in order to deploy the
+system. See the "Deployment extension API" section below for how to find and
+execute the extensions.
+
+Within this document, consider "deployment" to be a process of first
+post-processing a filesystem tree with one or more 'configure extensions', then 
+performing an operation to convert and/or transfer the filesystem tree
+using a 'write extension'.
+
+A cluster morphology defines a list of systems to deploy, and for each system a
+list of ways to deploy them. Use the following field:
+
+* **systems**: a list of systems to deploy;
+    the value is a list of mappings, where each mapping has the
+    following keys:
+
+    * **morph**: the system morphology to use in the specified
+        commit.
+
+    * **deploy**: a mapping where each key identifies a
+        system and each system has at least the following keys:
+
+        * **type**: identifies the type of deployment e.g. (kvm,
+            pxeboot), and thus what '.write' extension should be used.
+        * **location**: where the deployed system should end up
+            at. The syntax depends on the '.write' extension chosen in the
+            'type' field.
+
+        Optionally, it can specify **upgrade-type** and
+        **upgrade-location** as well, which should be interpreted in the same
+        way.
+
+        The system dictionary can have any number of other entries. These
+        should be collected up and are passed to each '.configure' extension
+        and to the '.write' extension, through the environment. The extensions
+        can interpret any of them in any manner.
+
+    * **deploy-defaults**: allows multiple deployments of the same
+        system to share some settings, when they can. Default settings
+        will be overridden by those defined inside the deploy mapping.
+
+    * **subsystems**: structured in the same way as the 'systems' entry, this
+        allows deploying something *within* a system. The Baserock reference
+        definitions use this to provide an initramfs inside some of the
+        reference systems.
+
+Example:
+
+    name: cluster-foo
+    kind: cluster
+    systems:
+        - morph: devel-system-x86_64-generic.morph
+            deploy:
+                cluster-foo-x86_64-1:
+                    type: extensions/kvm
+                    location: kvm+ssh://user@host/x86_64-1/x86_64-1.img
+                    upgrade-type: extensions/ssh-rsync
+                    upgrade-location: root@localhost
+                    HOSTNAME: cluster-foo-x86_64-1
+                    DISK_SIZE: 4G
+                    RAM_SIZE: 4G
+                    VCPUS: 2
+        - morph: devel-system-armv7-highbank
+            deploy-defaults:
+                type: extensions/pxeboot
+                location: cluster-foo-pxeboot-server
+            deploy:
+                cluster-foo-armv7-1:
+                    HOSTNAME: cluster-foo-armv7-1
+                cluster-foo-armv7-2:
+                    HOSTNAME: cluster-foo-armv7-2
+
+### Repo URLs
+
+Git repository locations can (and should) be abbreviated using the 'repo-alias' feature of Baserock definitions. This is a kind of [Compact URI](http://www.w3.org/TR/2009/CR-curie-20090116/). It currently only affects the 'repo' fields in a stratum .morph file.
+
+For example, instead of writing this:
+
+```
+- name: fhs-dirs
+  repo: git://git.baserock.org/baserock/baserock/fhs-dirs.git
+  ref: master
+```
+
+You can write this:
+
+```
+- name: fhs-dirs
+  repo: baserock:baserock/fhs-dirs.git
+  ref: master
+```
+
+There are two repo aliases that *must* be defined:
+
+ - `baserock:` (defaulting to git://git.baserock.org/baserock/)
+ - `upstream:` (defaulting to git://git.baserock.org/delta/)
+
+Baserock tools should allow changing these values. The main benefit of this compact URI scheme is that definitions are not tied to a specific Git server, or protocol. You can build against a mirror of the original Git server, or change the protocol that is used, just by altering the repo-alias configuration.
+
+Build environment
+-----------------
+
+### Sandboxing
+
+Builds should be done an isolated 'staging area', with only the specified dependencies available to the build process. The simplest approach is to install the dependencies in an empty directory, then [chroot](https://en.wikipedia.org/wiki/Chroot) into it. The more sandboxing the build tool can do, the better, because it lowers the chance of unexpected and unreproducible errors in the build process. The [Sandboxlib](https://github.com/CodethinkLabs/sandboxlib) Python library may be useful.
+
+The exception to the above is if the 'build-mode' field for a chunk is set to 'bootstrap'. Chunks in bootstrap mode are treated specially and do have access to tools from the host system. 
+
+FIXME: more detail is needed here!
+
+### Environment variables
+
+The following environment variables can be used in chunk configure/build/install commands, and must be defined by the build tool.
+
+ - `MORPH_ARCH`: the Morph-specific architecture name; see <http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/tree/morphlib/util.py#n473> for a list of valid architectures
+ - `PREFIX`: the value of the 'prefix' field for this chunk (set in the stratum .morph file); default /usr
+ - `TARGET`: the [GNU architecture triplet](http://wiki.osdev.org/Target_Triplet) for the target architecture (for example, x86_64-baserock-linux)
+ - `TARGET_STAGE1`: the 'bootstrap' variant of the GNU architecture triplet. This must be different from $TARGET -- you can just change the vendor field to achieve that (e.g. x86_64-bootstrap-linux).
+
+FIXME: The `TARGET` and `TARGET_STAGE1` fields are specific to building GNU/Linux based systems, they shouldn't be mandated in the spec.
+
+Deployment extension API
+------------------------
+
+**NOTE**: This section is more of an explaination of how the `morph deploy`
+command works than a general-purpose spec, in places. We hope to fix that in
+future.
+
+As noted in the previous section: within this document, consider "deployment"
+to be a process of first post-processing a filesystem tree with one or more
+'configure extensions', then performing an operation to convert and/or transfer
+the filesystem tree using a 'write extension'.
+
+### Deployment sequence
+
+A Baserock deployment tool should, for each labelled deployment in the
+'cluster', follow this sequence.
+
+1. Run the .check extension for that deployment 'type', if one exists. Abort
+   now, if it fails.
+
+   The .check extensions exist only to work around the fact that (2), (3) and
+   (4) may be slow, because programs that wait several minutes just to raise an
+   error that could have been detected right away are very annoying.
+
+2. Create a writeable temporary directory containing the contents of the system
+   artifact.
+
+3. For each 'subsystem' specified, recursively run steps 1, 3, 4 and 5. The
+   intention is that the result of the subsystem deployments end up *inside*
+   the temporary directory created in step 2 for the 'outer' deployment.
+
+4. Run each .configure extension that was specified in the
+   `configuration-extensions` field of the system morphology. The order of
+   running these is, sadly, unspecified.
+
+5. Run the .write extension for that deployment 'type'.
+
+The deployment of that system and its subsystems is now considered complete,
+and temporary data can be removed.
+
+### Locating and running extensions
+
+Deployment extensions are executable files that live in the top level directory
+of the definitions.git repo. Configure extensions have the extension
+`.configure`, check extensions have the extension `.check`, and write
+extensions have the extension `.write`.
+
+[[Morph]] will look for extensions inside the 'morphlib' Python package, in the
+`exts/` dir, before looking in the definitions.git repo.
+
+An extension must be executable using the [POSIX `exec()` system call]. We
+encourage writing them as Python scripts and using a `#!/usr/bin/env python`
+[hashbang], but any executable code is permitted.
+
+The 'execution environment' for an extension is sadly unspecified at the moment.
+[[Morph]] runs extensions without any kid of chroot environment, but each one
+is run in a separate [mount namespace]. Running extensions chrooted into the
+system being deployed does not make sense, as it may not contain the right
+dependencies for the extensions to work, and it may expect to run on a
+different, incompatible architecture to the system running the deployment in
+any case.
+
+A .check extension must be passed one commandline argument: the value of the
+`location` or `upgrade-location` field.
+
+A .configure extension must be passed one commandline argument: the path to
+the unpacked filesystem tree, which it can modify in some way. It is expected
+that a .configure extension will do nothing unless it is enabled using a
+configuration variable, but it is up to the code in the .configure extension
+to do this, and this behaviour is not currently enforced.
+
+A .write extension must be passed two commandline arguments: the value of the
+`location` or `upgrade-location` field, then the path to the unpacked
+filesystem tree (which it could modify in some way).
+
+All key/value pairs from the 'cluster' definition for the given labelled
+deployment of a system must be passed to all extensions, as environment
+variables. The `type`, `location`, `upgrade-type` and `upgrade-location` fields
+do not need to be passed in.
+
+Extensions are expected to set exit code 0 on success, and a non-zero value on
+failure. If any extension returns non-zero, the deployment tool should abort
+the deployment.
+
+Extensions are expected to write status information to 'stdout', and any error
+messages to 'stderr'. This is for user feedback ONLY, deployment tools should
+not do anything with this data other than log and/or display it.
+
+[[Morph]] sets an extra environment variable `MORPH_LOG_FD` which is a file
+descriptor that the extension can write log messages to, in order for them to
+appear in morph.log but not on stdout or stderr.
+
+[POSIX `exec()` system call]: http://pubs.opengroup.org/onlinepubs/009695399/functions/exec.html
+[hashbang]: https://en.wikipedia.org/wiki/Shebang_%28Unix%29
+[mount namespace]: https://stackoverflow.com/questions/22889241/linux-understanding-the-mount-namespace-clone-clone-newns-flag#22889401
+
+### Help for extensions
+
+The .configure and .write extensions may provide .help files as documentation.
+The .help file should be valid [YAML], containing a dict with the key `help`
+and a string value.
+
+For example, the `tar.write` extension could provide `tar.write.help` with the
+following content:
+
+    help: |
+        Deploy a system as a .tar file.
+
+### Common configuration parameters used by extensions
+
+Fill me in!
+
+[morph.git]: git://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph
+[YAML]: http://yaml.org/

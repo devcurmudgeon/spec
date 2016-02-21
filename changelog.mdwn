@@ -1,0 +1,93 @@
+[[!meta title="Baserock definitions format, version history"]]
+
+This page describes the history of the Baserock definitions format.
+
+FIXME: A changelog should no longer be needed now that the spec is
+defined in a version control repository.
+
+See also: [[current]] version, and [[planned]] versions.
+
+# Version 7
+
+[Version 7](http://listmaster.pepperfish.net/pipermail/baserock-dev-baserock.org/2015-July/013220.html) adds a DEFAULTS file that specifies predefined build systems and predefined splitting rules. Previously it was up to the build tool to define these.
+
+Note that versions of Morph before commit [d5c616d8287](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/commit/?id=d5c616d8287d94514d1323c7b5e6d6d2936a942d) do not implement version 7 correctly.
+
+# Version 6
+
+In definitions version 6, build system autodetection no longer happens. This means
+that any chunk that wants to use one of the predefined build systems (those built
+into Morph) must say so explicitly, using the 'build-system' field.
+
+The build-system field for a chunk can now be specified within a stratum that
+contains it. Previously you needed to add a .morph file for a chunk in order
+to specify its build-system, but we want to avoid needing a .morph file for
+components that follow standard patterns.
+
+Previously, if build-system wasn't given, Morph would scan the contents of the chunk's
+Git repo and try to autodetect which build system was used. This could be slow, could
+fail in confusing ways, and meant that to fully parse definitions you needed access to
+some or all of the repos they referenced.
+
+The chosen build-system affects which predefined command sequences are set for a chunk.
+It is valid to omit the field if a chunk has its own build commands defined in a .morph
+file. When listing the chunks included in a stratum, either 'morph' or 'build-system'
+*must* be specified, but not both (to avoid the possibility of conflicting values).
+
+# Version 5
+
+Morph commit [7f2ccd3d3095a79ad0f3cd0215d062415b20e083](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/commit/?id=7f2ccd3d3095a79ad0f3cd0215d062415b20e083) introduces version 5 of the definitions format.
+
+Morph supports defining `strip-commands` in chunk definitions to strip debug symbols from binaries in `DESTDIR`, and default strip commands have been set to strip all elf binaries that are executable or named like a shared library.
+
+This also sets `PYTHONPATH` such that write extensions may use libraries from definitions.git. Write extensions which require this functionality may declare that they are version 5 to prevent versions of morph which don't support this functionality, to produce a version mismatch error rather than deployments failing to locate libraries.
+
+# Version 4
+
+Morph commit [c373f5a403b0ec](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/commit/?h=c373f5a403b0ec84834d2f04fd1efac3792a7d35) introduces version 4 of the definitions format. In older versions of Morph the install-files.configure extension would crash if it tried to overwrite a symlink. This bug is fixed in the version of Morph that can build definitions version 4.
+
+If you need to overwrite a symlink at deploytime using install-files.configure, please use VERSION to 4 or above in your definitions.git repo so older versions of Morph gracefully refuse to deploy, instead of crashing.
+
+We have now moved all .configure and .write extensions into the definitions.git repository. Changes like this will not require a version numbering change in future.
+
+# Version 3
+
+Since morph commit [154a760fb88](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/commit/?h=154a760fb884cee14c2604b8bfbe52b0e7c0d4b1) morph supports a new architecture (armv5)
+
+This is effectively a change in the definitions format, as old morph doesn't recognize this architecture and will fail if a system with this architecture is added to definitions
+
+Version 3 also allows the new `install-essential-files.configure` extension to be used.
+
+
+# Version 2
+
+1. definitions repo commit [db1fe6e41](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git/commit/?h=db1fe6e41bebf7da71d11fe9bc492ede1821f57b)
+1. Version 2 makes paths to non-existent chunk morphs invalid, prior to version 2 morph would simply ignore paths to non-existent chunk morphs and either use the morph in the chunk repo (if there was one) or run build system detection.
+
+   With version 2, if morph encounters a path to a chunk morph that doesn't exist it will error with an error message such as:
+
+   "ERROR: Couldn't find morphology: strata/cats/xattr.morph referenced in strata/swift.morph"
+
+
+# Version 1
+
+The 'build-depends' parameter was made optional. It was previously
+mandatory to specify 'build-depends' for a chunk, even if it was an
+empty list.
+
+
+# Version 0
+
+As of [this commit](http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/morph.git/commit/?id=c2d6bf758845076eca6eb71af09df77165993270) morph was updated to check for the presence of a VERSION file, and to parse it for version:
+
+Morph will fail if:
+
+- VERSION file exists
+- and it is a yaml file
+- and it is a dict
+- and has the key 'version'
+- and the contents of the key 'version' is an int
+- and that int is in the list of non_supported_versions (empty
+  at the moment)
+
+Otherwise, morph will assume Version 0 until we add future functionality. Thus Version 0 is default behaviour.

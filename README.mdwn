@@ -1,0 +1,31 @@
+Baserock definitions format specification
+=========================================
+
+This repo defines the Baserock definitions format.
+
+The canonical location is: <http://git.baserock.org/baserock/baserock/spec>.
+
+
+Text
+----
+
+The definitions format is documentated as a Markdown text file.
+
+See that text for more information about the Baserock definitions format.
+
+
+JSON-Schemas
+------------
+
+The canonical representation of Baserock definitions is as YAML files.
+
+We provide JSON-Schema schemas in the schemas/ directory, which are useful
+when validating the structure of definitions files.  Most JSON-Schema
+validators operate on deserialized data structures, rather than literal JSON
+text, so it works fine for YAML as well as JSON.
+
+The schemas correspond to the latest version of the definitions format. You
+can get schemas for older versions (back to definitions format version 7) by looking at the tags of this repository,
+
+If you want to support multiple versions of the definitions format in a tool, I
+recommend embedding the schemas for each version in different directories.
